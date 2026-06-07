@@ -21,7 +21,7 @@ export default function LoginPage() {
       return;
     }
 
-    setMessage("Logged in successfully!");
+    window.location.href = "/dashboard";
   }
 
   return (
