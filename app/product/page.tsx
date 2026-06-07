@@ -17,6 +17,7 @@ export default function ProductPage() {
   const designId = searchParams.get("designId");
 
   const [design, setDesign] = useState<Design | null>(null);
+  const [userId, setUserId] = useState("");
   const [productType, setProductType] = useState("t-shirt");
   const [size, setSize] = useState("L");
   const [color, setColor] = useState("Black");
@@ -38,6 +39,8 @@ export default function ProductPage() {
         return;
       }
 
+      setUserId(userData.user.id);
+
       const { data, error } = await supabase
         .from("designs")
         .select("*")
@@ -58,10 +61,31 @@ export default function ProductPage() {
     loadDesign();
   }, [designId]);
 
-  function handleContinue() {
-    alert(
-      `Selected: ${productType}, ${size}, ${color}`
-    );
+  async function handleContinue() {
+    if (!design || !userId) {
+      setMessage("Missing design or user.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({
+        user_id: userId,
+        design_id: design.id,
+        product_type: productType,
+        size,
+        color,
+        status: "draft",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    window.location.href = `/checkout?orderId=${data.id}`;
   }
 
   if (loading) {
