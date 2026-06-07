@@ -55,8 +55,13 @@ export default function DashboardPage() {
         </p>
 
         <a href="/upload" className="rounded border p-2 text-center">
-          Upload a Design
-        </a>
+  Upload a Design
+</a>
+
+<a href="/designs" className="rounded border p-2 text-center">
+  My Designs
+</a>
+        
 
         <button
           onClick={handleLogout}
