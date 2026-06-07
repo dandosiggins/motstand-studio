@@ -68,9 +68,23 @@ export default function UploadPage() {
       .from("designs")
       .getPublicUrl(filePath);
 
-    setUploadedUrl(data.publicUrl);
-    setMessage("Design uploaded successfully!");
-    setUploading(false);
+    const { error: dbError } = await supabase
+  .from("designs")
+  .insert({
+    user_id: user.id,
+    file_url: data.publicUrl,
+    file_path: filePath,
+  });
+
+if (dbError) {
+  setUploading(false);
+  setMessage(dbError.message);
+  return;
+}
+
+setUploadedUrl(data.publicUrl);
+setMessage("Design uploaded successfully!");
+setUploading(false);
   }
 
   if (loading) {
