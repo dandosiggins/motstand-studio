@@ -15,6 +15,18 @@ type Order = {
   stripe_payment_id: string | null;
   gelato_order_id: string | null;
   created_at: string;
+
+  shipping_first_name: string | null;
+  shipping_last_name: string | null;
+  shipping_email: string | null;
+  shipping_phone: string | null;
+  shipping_address_line1: string | null;
+  shipping_address_line2: string | null;
+  shipping_city: string | null;
+  shipping_state: string | null;
+  shipping_post_code: string | null;
+  shipping_country: string | null;
+
   designs: {
     file_url: string;
     file_path: string;
@@ -28,6 +40,18 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [shippingFirstName, setShippingFirstName] = useState("");
+  const [shippingLastName, setShippingLastName] = useState("");
+  const [shippingEmail, setShippingEmail] = useState("");
+  const [shippingPhone, setShippingPhone] = useState("");
+  const [shippingAddressLine1, setShippingAddressLine1] = useState("");
+  const [shippingAddressLine2, setShippingAddressLine2] = useState("");
+  const [shippingCity, setShippingCity] = useState("");
+  const [shippingState, setShippingState] = useState("AB");
+  const [shippingPostCode, setShippingPostCode] = useState("");
+  const [shippingCountry, setShippingCountry] = useState("CA");
 
   useEffect(() => {
     async function loadOrder() {
@@ -63,38 +87,92 @@ export default function CheckoutPage() {
         return;
       }
 
-      setOrder(data as Order);
+      const loadedOrder = data as Order;
+      setOrder(loadedOrder);
+
+      setShippingFirstName(loadedOrder.shipping_first_name ?? "");
+      setShippingLastName(loadedOrder.shipping_last_name ?? "");
+      setShippingEmail(loadedOrder.shipping_email ?? userData.user.email ?? "");
+      setShippingPhone(loadedOrder.shipping_phone ?? "");
+      setShippingAddressLine1(loadedOrder.shipping_address_line1 ?? "");
+      setShippingAddressLine2(loadedOrder.shipping_address_line2 ?? "");
+      setShippingCity(loadedOrder.shipping_city ?? "");
+      setShippingState(loadedOrder.shipping_state ?? "AB");
+      setShippingPostCode(loadedOrder.shipping_post_code ?? "");
+      setShippingCountry(loadedOrder.shipping_country ?? "CA");
+
       setLoading(false);
     }
 
     loadOrder();
   }, [orderId]);
 
-async function handleCheckout() {
-  if (!order) {
-    setMessage("No order found.");
-    return;
+  async function handleCheckout() {
+    if (!order) {
+      setMessage("No order found.");
+      return;
+    }
+
+    if (
+      !shippingFirstName ||
+      !shippingLastName ||
+      !shippingEmail ||
+      !shippingAddressLine1 ||
+      !shippingCity ||
+      !shippingState ||
+      !shippingPostCode ||
+      !shippingCountry
+    ) {
+      setMessage("Please complete all required shipping fields.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({
+        shipping_first_name: shippingFirstName,
+        shipping_last_name: shippingLastName,
+        shipping_email: shippingEmail,
+        shipping_phone: shippingPhone,
+        shipping_address_line1: shippingAddressLine1,
+        shipping_address_line2: shippingAddressLine2,
+        shipping_city: shippingCity,
+        shipping_state: shippingState,
+        shipping_post_code: shippingPostCode,
+        shipping_country: shippingCountry,
+      })
+      .eq("id", order.id)
+      .eq("user_id", order.user_id);
+
+    if (updateError) {
+      setSaving(false);
+      setMessage(updateError.message);
+      return;
+    }
+
+    const response = await fetch("/api/create-checkout-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderId: order.id,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setSaving(false);
+      setMessage(data.error || "Unable to start checkout.");
+      return;
+    }
+
+    window.location.href = data.url;
   }
-
-  const response = await fetch("/api/create-checkout-session", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      orderId: order.id,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    setMessage(data.error || "Unable to start checkout.");
-    return;
-  }
-
-  window.location.href = data.url;
-}
 
   if (loading) {
     return (
@@ -104,11 +182,11 @@ async function handleCheckout() {
     );
   }
 
-  if (message || !order) {
+  if (message && !order) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col gap-4">
-          <p>{message || "Order not found."}</p>
+          <p>{message}</p>
           <a href="/designs" className="underline">
             Back to My Designs
           </a>
@@ -117,12 +195,16 @@ async function handleCheckout() {
     );
   }
 
+  if (!order) {
+    return null;
+  }
+
   const displayProduct =
     order.product_type === "t-shirt" ? "T-Shirt" : "Hoodie";
 
   return (
     <main className="min-h-screen p-8">
-      <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
+      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2">
         <section className="rounded border p-6">
           <h1 className="mb-4 text-3xl font-bold">
             Checkout Summary
@@ -141,19 +223,8 @@ async function handleCheckout() {
               )}
             </div>
           </div>
-        </section>
 
-        <section className="flex flex-col gap-6 rounded border p-6">
-          <div>
-            <h2 className="text-2xl font-bold">
-              Your Order
-            </h2>
-            <p className="text-sm text-gray-600">
-              Review your product before payment.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded border p-4">
+          <div className="mt-6 flex flex-col gap-3 rounded border p-4">
             <p>
               <strong>Product:</strong> {displayProduct}
             </p>
@@ -168,19 +239,131 @@ async function handleCheckout() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 rounded border p-4">
+          <div className="mt-6 flex flex-col gap-2 rounded border p-4">
             <p className="text-lg font-bold">Estimated Price</p>
             <p className="text-3xl font-bold">$29.99</p>
             <p className="text-sm text-gray-600">
               Placeholder price for development.
             </p>
           </div>
+        </section>
+
+        <section className="flex flex-col gap-6 rounded border p-6">
+          <div>
+            <h2 className="text-2xl font-bold">
+              Shipping Information
+            </h2>
+            <p className="text-sm text-gray-600">
+              Required before payment so Gelato can fulfill the order.
+            </p>
+          </div>
+
+          {message && <p className="text-sm">{message}</p>}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2">
+              First Name *
+              <input
+                value={shippingFirstName}
+                onChange={(e) => setShippingFirstName(e.target.value)}
+                className="rounded border p-2"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              Last Name *
+              <input
+                value={shippingLastName}
+                onChange={(e) => setShippingLastName(e.target.value)}
+                className="rounded border p-2"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2">
+            Email *
+            <input
+              type="email"
+              value={shippingEmail}
+              onChange={(e) => setShippingEmail(e.target.value)}
+              className="rounded border p-2"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            Phone
+            <input
+              value={shippingPhone}
+              onChange={(e) => setShippingPhone(e.target.value)}
+              className="rounded border p-2"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            Address Line 1 *
+            <input
+              value={shippingAddressLine1}
+              onChange={(e) => setShippingAddressLine1(e.target.value)}
+              className="rounded border p-2"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            Address Line 2
+            <input
+              value={shippingAddressLine2}
+              onChange={(e) => setShippingAddressLine2(e.target.value)}
+              className="rounded border p-2"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="flex flex-col gap-2">
+              City *
+              <input
+                value={shippingCity}
+                onChange={(e) => setShippingCity(e.target.value)}
+                className="rounded border p-2"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              Province/State *
+              <input
+                value={shippingState}
+                onChange={(e) => setShippingState(e.target.value)}
+                className="rounded border p-2"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              Postal Code *
+              <input
+                value={shippingPostCode}
+                onChange={(e) => setShippingPostCode(e.target.value)}
+                className="rounded border p-2"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2">
+            Country *
+            <select
+              value={shippingCountry}
+              onChange={(e) => setShippingCountry(e.target.value)}
+              className="rounded border p-2"
+            >
+              <option value="CA">Canada</option>
+              <option value="US">United States</option>
+            </select>
+          </label>
 
           <button
             onClick={handleCheckout}
-            className="rounded border p-3"
+            disabled={saving}
+            className="rounded border p-3 disabled:opacity-50"
           >
-            Continue to Payment
+            {saving ? "Saving..." : "Continue to Payment"}
           </button>
 
           <a href={`/product?designId=${order.design_id}`} className="underline">
