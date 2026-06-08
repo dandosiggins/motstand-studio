@@ -70,9 +70,31 @@ export default function CheckoutPage() {
     loadOrder();
   }, [orderId]);
 
-  function handleCheckout() {
-    alert("Stripe checkout will be added next.");
+async function handleCheckout() {
+  if (!order) {
+    setMessage("No order found.");
+    return;
   }
+
+  const response = await fetch("/api/create-checkout-session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      orderId: order.id,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    setMessage(data.error || "Unable to start checkout.");
+    return;
+  }
+
+  window.location.href = data.url;
+}
 
   if (loading) {
     return (
