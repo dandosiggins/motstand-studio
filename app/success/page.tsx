@@ -28,6 +28,7 @@ export default function SuccessPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [creatingGelatoDraft, setCreatingGelatoDraft] = useState(false);
 
   useEffect(() => {
     async function loadAndUpdateOrder() {
@@ -63,6 +64,15 @@ export default function SuccessPage() {
         return;
       }
 
+      if (
+        existingOrder.status === "gelato_draft_created" ||
+        existingOrder.status === "paid"
+      ) {
+        setOrder(existingOrder as Order);
+        setLoading(false);
+        return;
+      }
+
       const { data: updatedOrder, error: updateError } = await supabase
         .from("orders")
         .update({
@@ -93,6 +103,44 @@ export default function SuccessPage() {
     loadAndUpdateOrder();
   }, [orderId]);
 
+  async function handleCreateGelatoDraft() {
+    if (!order) {
+      setMessage("No order found.");
+      return;
+    }
+
+    setCreatingGelatoDraft(true);
+    setMessage("");
+
+    const response = await fetch("/api/create-gelato-draft-order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderId: order.id,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setCreatingGelatoDraft(false);
+
+      console.error("Gelato draft error:", data);
+
+      setMessage(
+        data.error ||
+          "Unable to create Gelato draft order. Check the browser console and terminal for details."
+      );
+
+      return;
+    }
+
+    setCreatingGelatoDraft(false);
+    window.location.reload();
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -101,7 +149,7 @@ export default function SuccessPage() {
     );
   }
 
-  if (message || !order) {
+  if (!order) {
     return (
       <main className="flex min-h-screen items-center justify-center p-8">
         <div className="flex max-w-md flex-col gap-4 rounded border p-6">
@@ -127,6 +175,12 @@ export default function SuccessPage() {
           <p className="mt-2 text-gray-600">
             Your order has been marked as paid.
           </p>
+
+          {message && (
+            <p className="mt-4 rounded border p-3 text-sm">
+              {message}
+            </p>
+          )}
         </section>
 
         <section className="grid gap-8 rounded border p-6 md:grid-cols-2">
@@ -163,12 +217,33 @@ export default function SuccessPage() {
               <p className="break-all text-sm text-gray-600">
                 <strong>Order ID:</strong> {order.id}
               </p>
+              {order.gelato_order_id && (
+                <p className="break-all text-sm text-gray-600">
+                  <strong>Gelato Order ID:</strong> {order.gelato_order_id}
+                </p>
+              )}
             </div>
 
             <p className="text-sm text-gray-600">
-              Next, we’ll connect Gelato so paid orders can be sent for printing
-              and fulfillment.
+              This creates a draft order in Gelato so we can confirm the
+              fulfillment connection safely before enabling live production
+              orders.
             </p>
+
+            <button
+              onClick={handleCreateGelatoDraft}
+              disabled={
+                creatingGelatoDraft ||
+                order.status === "gelato_draft_created"
+              }
+              className="rounded border p-3 text-center disabled:opacity-50"
+            >
+              {order.status === "gelato_draft_created"
+                ? "Gelato Draft Created"
+                : creatingGelatoDraft
+                  ? "Creating Gelato Draft..."
+                  : "Create Gelato Draft Order"}
+            </button>
 
             <a href="/dashboard" className="rounded border p-3 text-center">
               Back to Dashboard
