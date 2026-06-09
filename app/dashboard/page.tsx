@@ -61,7 +61,10 @@ export default function DashboardPage() {
 <a href="/designs" className="rounded border p-2 text-center">
   My Designs
 </a>
-        
+
+ <a href="/orders" className="rounded border p-2 text-center">
+  My Orders
+</a>       
 
         <button
           onClick={handleLogout}
