@@ -119,7 +119,11 @@ export default function ProductPage() {
 
           <div className="flex min-h-96 items-center justify-center rounded bg-gray-100 p-8">
             {design && (
-              <div className="relative flex h-80 w-64 items-center justify-center rounded bg-black">
+              <div
+                className={`relative flex h-80 w-64 items-center justify-center rounded ${
+                  color === "Black" ? "bg-black" : "bg-white"
+                }`}
+              >
                 <div className="absolute top-0 h-12 w-24 rounded-b-full bg-gray-100" />
 
                 <img
@@ -150,7 +154,6 @@ export default function ProductPage() {
               className="rounded border p-2"
             >
               <option value="t-shirt">T-Shirt</option>
-              <option value="hoodie">Hoodie</option>
             </select>
           </label>
 
@@ -178,8 +181,6 @@ export default function ProductPage() {
             >
               <option value="Black">Black</option>
               <option value="White">White</option>
-              <option value="Heather Gray">Heather Gray</option>
-              <option value="Navy">Navy</option>
             </select>
           </label>
 
