@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -12,7 +12,7 @@ type Design = {
   created_at: string;
 };
 
-export default function ProductPage() {
+function ProductPageContent() {
   const searchParams = useSearchParams();
   const designId = searchParams.get("designId");
 
@@ -197,5 +197,18 @@ export default function ProductPage() {
         </section>
       </div>
     </main>
+  );
+}
+export default function ProductPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center">
+          <p>Loading product page...</p>
+        </main>
+      }
+    >
+      <ProductPageContent />
+    </Suspense>
   );
 }

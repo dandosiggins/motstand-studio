@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -33,7 +33,7 @@ type Order = {
   } | null;
 };
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
@@ -376,5 +376,18 @@ export default function CheckoutPage() {
         </section>
       </div>
     </main>
+  );
+}
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center">
+          <p>Loading checkout...</p>
+        </main>
+      }
+    >
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

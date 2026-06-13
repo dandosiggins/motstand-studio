@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -21,7 +21,7 @@ type Order = {
   } | null;
 };
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
@@ -256,5 +256,18 @@ export default function SuccessPage() {
         </section>
       </div>
     </main>
+  );
+}
+export default function SuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center">
+          <p>Loading success page...</p>
+        </main>
+      }
+    >
+      <SuccessPageContent />
+    </Suspense>
   );
 }
