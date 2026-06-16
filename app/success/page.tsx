@@ -64,40 +64,8 @@ function SuccessPageContent() {
         return;
       }
 
-      if (
-        existingOrder.status === "gelato_draft_created" ||
-        existingOrder.status === "paid"
-      ) {
-        setOrder(existingOrder as Order);
-        setLoading(false);
-        return;
-      }
-
-      const { data: updatedOrder, error: updateError } = await supabase
-        .from("orders")
-        .update({
-          status: "paid",
-        })
-        .eq("id", orderId)
-        .eq("user_id", userData.user.id)
-        .select(`
-          *,
-          designs (
-            file_url,
-            file_path
-          )
-        `)
-        .single();
-
-      if (updateError) {
-        setMessage(updateError.message);
-        setOrder(existingOrder as Order);
-        setLoading(false);
-        return;
-      }
-
-      setOrder(updatedOrder as Order);
-      setLoading(false);
+setOrder(existingOrder as Order);
+setLoading(false);
     }
 
     loadAndUpdateOrder();
@@ -231,18 +199,21 @@ function SuccessPageContent() {
             </p>
 
             <button
-              onClick={handleCreateGelatoDraft}
-              disabled={
-                creatingGelatoDraft ||
-                order.status === "gelato_draft_created"
-              }
-              className="rounded border p-3 text-center disabled:opacity-50"
-            >
+  onClick={handleCreateGelatoDraft}
+  disabled={
+    creatingGelatoDraft ||
+    order.status === "gelato_draft_created" ||
+    order.status !== "paid"
+  }
+  className="rounded border p-3 text-center disabled:opacity-50"
+>
               {order.status === "gelato_draft_created"
-                ? "Gelato Draft Created"
-                : creatingGelatoDraft
-                  ? "Creating Gelato Draft..."
-                  : "Create Gelato Draft Order"}
+  ? "Gelato Draft Created"
+  : order.status !== "paid"
+    ? "Waiting for Stripe Payment Confirmation"
+    : creatingGelatoDraft
+      ? "Creating Gelato Draft..."
+      : "Create Gelato Draft Order"}
             </button>
 
             <a href="/dashboard" className="rounded border p-3 text-center">
